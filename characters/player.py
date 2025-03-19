@@ -2,17 +2,7 @@ from PyQt6.QtCore import QRect
 from PyQt6.QtGui import QColor
 
 import global_arguments
-
-def is_adjacent(rect1: QRect, rect2: QRect) -> bool:
-    if rect1.intersects(rect2):
-        return False  # 如果相交，则不是相邻
-
-    # 检查是否水平相邻
-    horizontal_adjacent = (
-        rect1.right() + 1 == rect2.left() or rect2.right() + 1 == rect1.left()
-    ) and (rect1.top() <= rect2.bottom() and rect1.bottom() >= rect2.top())
-
-    return horizontal_adjacent
+from utils.utils import is_horizontal_adjacent
 
 class Player:
     def __init__(self, hp=3, mp=3, x=0, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
@@ -105,7 +95,15 @@ class Player:
         # 站起
         if not global_arguments.down_pressed and self.is_crouching:
             self.stretch()
-            self.is_crouching = False
+            # 如果头顶障碍物，导致站起所需空间不足，则不站起
+            if obstacles:
+                player_rect = self.get_player()
+                flag = any(player_rect.intersected(obstacle) for obstacle in obstacles)
+                if not flag:
+                    self.is_crouching = False
+                    return
+                else:
+                    self.crouch()
             
     
     def update_x(self, border_left, border_right, obstacles=None):
@@ -192,27 +190,11 @@ class Player:
                     self.reset_jumping()
                 # 螳螂爪
                 if self.claw_jumping_ability and self.velocity_y > 0:
-                    if is_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
+                    if is_horizontal_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
                         self.set_gravity(0)
                         self.set_velocity_y(1)     
                     else:
                         self.set_gravity(self.default_gravity)
-            
-        # # 螳螂爪
-        # if self.claw_jumping_ability:
-        #     if obstacles:
-        #         player_rect = self.get_player()
-        #         for obstacle in obstacles:
-        #             if is_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
-        #                 self.set_gravity(0)
-        #                 if global_arguments.jump_pressed:
-        #                     self.set_velocity_y(self.default_velocity_y)
-        #                     global_arguments.jump_pressed = False
-        #                 else:
-        #                     self.set_velocity_y(1)
-        #                 self.reset_jumping()        
-        #             else:
-        #                 self.set_gravity(self.default_gravity)
     
     def get_player(self):
         return QRect(self.x, self.y, self.width, self.height)

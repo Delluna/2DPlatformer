@@ -60,7 +60,7 @@ class Main_Window(QWidget):
             global_arguments.jump_pressed = False
     
     def update_game(self):
-        self.player.update_c()  # 下蹲运动
+        self.player.update_c(obstacles=self.current_scene.obstacles)  # 下蹲运动
         self.player.update_x(0, self.width(), obstacles=self.current_scene.obstacles)  # 水平运动
         self.player.update_y(0, self.current_scene.ground_level, obstacles=self.current_scene.obstacles)  # 垂直运动
          
