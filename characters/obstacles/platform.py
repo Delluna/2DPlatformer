@@ -9,5 +9,9 @@ class Platform(QRect):
 
         self.color = color
 
+    def draw(self, painter):
+        painter.setBrush(self.color)
+        painter.drawRect(self.get_obstacle())
+            
     def get_obstacle(self):
         return QRect(self)  # 直接返回自身

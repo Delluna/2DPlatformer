@@ -1,11 +1,12 @@
 from PyQt6 import QtCore
 
 # 按键绑定
-move_left = QtCore.Qt.Key.Key_A
-move_right = QtCore.Qt.Key.Key_D
-move_sprint = QtCore.Qt.Key.Key_Shift
-move_crouch = QtCore.Qt.Key.Key_S
-move_jump = QtCore.Qt.Key.Key_K
+key_move_left = QtCore.Qt.Key.Key_A
+key_move_right = QtCore.Qt.Key.Key_D
+key_move_sprint = QtCore.Qt.Key.Key_Shift
+key_move_crouch = QtCore.Qt.Key.Key_S
+key_attack_normal = QtCore.Qt.Key.Key_J
+key_move_jump = QtCore.Qt.Key.Key_K
 
 
 window_width = 800
@@ -16,3 +17,4 @@ right_pressed = False
 sprint_pressed = False
 down_pressed = False
 jump_pressed = False
+attack_pressed = False

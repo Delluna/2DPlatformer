@@ -1,4 +1,4 @@
-from PyQt6.QtCore import QRect
+from PyQt6.QtCore import QRect, QTimer
 from PyQt6.QtGui import QColor
 
 import global_arguments
@@ -6,48 +6,74 @@ from utils.utils import is_horizontal_adjacent
 
 class Player:
     def __init__(self, hp=3, mp=3, x=0, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
-        self.hp = hp
-        self.mp = mp
-        
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        
         # 默认值
         self.default_velocity_x = velocity_x  # 默认水平速度
         self.default_velocity_y = velocity_y  # 默认垂直速度
         self.default_gravity = gravity  # 默认重力
         
-        # 当前值
+        # 当前状态
+        self.hp = hp
+        self.mp = mp
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.color = QColor(255, 0, 0)
+        self.direction = 1  # 人物朝向，0:'left', 1:'right', 2:'up', 3:'down'
         self.velocity_x = self.default_velocity_x  # 水平速度
         self.velocity_y = self.default_velocity_y  # 垂直速度
-        
         self.gravity = self.default_gravity  # 重力
-        self.jump_strength = jump_strength  # 垂直加速度
-        self.sprint_strength = sprint_scale * velocity_x  # 冲刺能力
         self.is_jumping = False
         self.is_second_jumping = False
         self.is_crouching = False  # 下蹲
+        self.is_attacking = False
         
+        # 攻击能力
+        self.normal_attack_damage = 1  # 攻击伤害
+        self.normal_attack_duration = 200  # 攻击持续时间，单位ms
+        self.normal_attack_cooldown = False  # 攻击冷却
+        self.normal_attack_cooldown_time = 0  # 攻击冷却时间，单位ms
+        self.normal_attack_range = {'width': 40, 'height': 40}  # 攻击空间
+        self.normal_attack_box = None
+        
+        # 跳跃能力
         self.jumping_ability = True  # 跳跃能力
+        self.jump_strength = jump_strength  # 垂直速度
         self.second_jumping_ability = True  # 二段跳能力
         self.claw_jumping_ability = True  # 螳螂爪能力
-        self.sprint_ability = True  # 冲刺能力
         
-        self.color = QColor(255, 0, 0)
+        # 冲刺能力
+        self.sprint_ability = True  # 冲刺能力
+        self.sprint_strength = sprint_scale * velocity_x  # 冲刺
+        self.sprint_duration = 200  # 冲刺持续时间，单位ms
+         
+    def reset_jumping(self):
+        self.is_jumping = False
+        self.is_second_jumping = False
     
+    def reset_normal_attack_cooldown(self):
+        self.normal_attack_cooldown = False
+    
+    def reset_velocity_x(self):
+        self.set_velocity_x(self.default_velocity_x)
+    
+    def set_gravity(self, gravity):
+        self.gravity = gravity
+        
+    def set_velocity_x(self, velocity_x):
+        self.velocity_x = velocity_x
+        
+    def set_velocity_y(self, velocity_y):
+        self.velocity_y = velocity_y
+    
+    def set_direction(self, direction):
+        self.direction = direction
+        
     def move_left(self):
         self.x -= self.velocity_x
     
     def move_right(self):
         self.x += self.velocity_x
-
-    def sprint_left(self):
-        self.x -= self.sprint_strength
-    
-    def sprint_right(self):
-        self.x += self.sprint_strength
         
     def crouch(self):
         self.y += self.height // 2
@@ -57,6 +83,11 @@ class Player:
         self.y -= self.height
         self.height *= 2
     
+    def sprint(self):
+        if self.player.sprint_ability:
+            self.velocity_x = self.sprint_strength
+            QTimer.singleShot(self.sprint_duration, self.reset_velocity_x)
+        
     def jump(self):
         # 二段跳
         if self.jumping_ability and self.second_jumping_ability and self.is_jumping and not self.is_second_jumping:
@@ -69,20 +100,38 @@ class Player:
             self.set_velocity_y(self.jump_strength)
             self.set_gravity(self.default_gravity)
             self.is_jumping = True
-    
-    def reset_jumping(self):
-        self.is_jumping = False
-        self.is_second_jumping = False
-    
-    def set_gravity(self, gravity):
-        self.gravity = gravity
         
-    def set_velocity_y(self, velocity_y):
-        self.velocity_y = velocity_y
+    def attack(self, enemies=None):
+        if self.normal_attack_cooldown:
+            return
+        self.is_attacking = True
+        self.normal_attack_cooldown = True
         
-    def attack(self):
-        pass
+        # 计算攻击区域
+        if self.direction == 0:
+            self.normal_attack_box = QRect(self.x - self.normal_attack_range['width'], 
+                               self.y + self.height // 2 - self.normal_attack_range['height'] // 2, 
+                               self.normal_attack_range['width'],
+                               self.normal_attack_range['height'])
+        if self.direction == 1:
+            self.normal_attack_box = QRect(self.x + self.width, 
+                               self.y + self.height // 2 - self.normal_attack_range['height'] // 2, 
+                               self.normal_attack_range['width'],
+                               self.normal_attack_range['height'])
+        
+        # 攻击碰撞检测
+        if enemies:
+            for enemy in enemies:
+                if self.normal_attack_box.intersects(enemy.get_enemy()):
+                    enemy.take_damage(self.normal_attack_damage)
+        
+        QTimer.singleShot(self.normal_attack_duration, self.end_attack)        # QTimer.singleShot(延迟时间, 需要执行的函数)，用于在 指定时间后执行某个函数（不需要括号），但不会重复执行。
+        QTimer.singleShot(self.normal_attack_cooldown_time, self.reset_normal_attack_cooldown)
     
+    def end_attack(self):
+        self.is_attacking = False
+        self.normal_attack_box = None
+        
     def defense(self):
         pass
     
@@ -109,10 +158,8 @@ class Player:
     def update_x(self, border_left, border_right, obstacles=None):
         # 左移
         if global_arguments.left_pressed:
-            if self.sprint_ability and global_arguments.sprint_pressed:
-                self.sprint_left()
-            else:
-                self.move_left()
+            self.move_left()
+            self.set_direction(0)
         
         # 屏幕边界
         if self.x < border_left:
@@ -131,10 +178,8 @@ class Player:
             
         # 右移        
         if global_arguments.right_pressed:
-            if self.sprint_ability and global_arguments.sprint_pressed:
-                self.sprint_right()
-            else:
-                self.move_right()
+            self.move_right()
+            self.set_direction(1)
             
         # 屏幕边界
         if self.x > border_right - self.width:
@@ -195,6 +240,16 @@ class Player:
                         self.set_velocity_y(1)     
                     else:
                         self.set_gravity(self.default_gravity)
+    
+    def draw(self, painter):
+        
+        painter.setBrush(self.color)
+        painter.drawRect(self.get_player())
+        
+        # 攻击效果渲染
+        if self.normal_attack_box:
+            painter.setBrush(QColor(0, 255, 0))
+            painter.drawRect(self.normal_attack_box)
     
     def get_player(self):
         return QRect(self.x, self.y, self.width, self.height)

@@ -33,31 +33,37 @@ class Main_Window(QWidget):
         self.show()
         
     def keyPressEvent(self, event):
-        if event.key() == global_arguments.move_left:
+        if event.key() == global_arguments.key_move_left:
             global_arguments.left_pressed = True
-        if event.key() == global_arguments.move_right:
+        if event.key() == global_arguments.key_move_right:
             global_arguments.right_pressed = True
-        if event.key() == global_arguments.move_sprint:
-            global_arguments.sprint_pressed = True
-        if event.key() == global_arguments.move_crouch:
+        if event.key() == global_arguments.key_move_crouch:
             global_arguments.down_pressed = True
-        if not global_arguments.jump_pressed and event.key() == global_arguments.move_jump:
+        if not global_arguments.sprint_pressed and event.key() == global_arguments.key_move_sprint:
+            global_arguments.sprint_pressed = True
+            self.player.sprint()  # 冲刺
+        if not global_arguments.jump_pressed and event.key() == global_arguments.key_move_jump:
             global_arguments.jump_pressed = True
             self.player.jump()  # 跳跃
+        if not global_arguments.attack_pressed and event.key() == global_arguments.key_attack_normal:
+            global_arguments.attack_pressed = True
+            self.player.attack(enemies=self.current_scene.enemies)  # 攻击
     
     def keyReleaseEvent(self, event):
         if event.isAutoRepeat():  # 如果是自动重复，不处理
             return  
-        if event.key() == global_arguments.move_left:
+        if event.key() == global_arguments.key_move_left:
             global_arguments.left_pressed = False
-        if event.key() == global_arguments.move_right:
+        if event.key() == global_arguments.key_move_right:
             global_arguments.right_pressed = False
-        if event.key() == global_arguments.move_sprint:
+        if event.key() == global_arguments.key_move_sprint:
             global_arguments.sprint_pressed = False
-        if event.key() == global_arguments.move_crouch:
+        if event.key() == global_arguments.key_move_crouch:
             global_arguments.down_pressed = False
-        if event.key() == global_arguments.move_jump:
+        if event.key() == global_arguments.key_move_jump:
             global_arguments.jump_pressed = False
+        if event.key() == global_arguments.key_attack_normal:
+            global_arguments.attack_pressed = False
     
     def update_game(self):
         self.player.update_c(obstacles=self.current_scene.obstacles)  # 下蹲运动
@@ -74,8 +80,8 @@ class Main_Window(QWidget):
             self.current_scene.draw(painter)
             
             # 玩家
-            painter.setBrush(self.player.color)
-            painter.drawRect(self.player.get_player())
+            self.player.draw(painter)
+            
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
