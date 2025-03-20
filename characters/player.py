@@ -104,7 +104,7 @@ class Player:
         
     def crouch(self):
         self.y += self.height // 2
-        self.height /= 2
+        self.height = self.height // 2
         
     def stretch(self):
         self.y -= self.height
