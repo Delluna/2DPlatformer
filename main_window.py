@@ -52,22 +52,9 @@ class Main_Window(QWidget):
         if not global_arguments.attack_pressed and event.key() == global_arguments.key_attack_normal:
             global_arguments.attack_pressed = True
             self.player.attack(enemies=self.current_scene.enemies)  # 攻击
-        # 检测角色是否进入门
-        self.check_door_collision() 
-
-    def check_door_collision(self):
-        """ 检测玩家是否进入门 """
-        player_rect = self.player.get_player()
-        for door in self.current_scene.doors:
-            if player_rect.intersected(door.get_door()):
-                self.current_scene = create_scene(door.scene_id, self.width(), self.height(), self.ground_level)
-                if self.player.direction == 0:
-                    self.player.set_position(x=self.width() - self.player.x,y=self.player.y)
-                elif self.player.direction == 1:
-                    self.player.set_position(x=self.player.default_x,y=self.player.y)
-            
+        
     def keyReleaseEvent(self, event):
-        if event.isAutoRepeat():  # 如果是自动重复，不处理
+        if event.isAutoRepeat():  # 如果是自动重复，不处理，否则长按跳跃键会连续跳跃
             return  
         if event.key() == global_arguments.key_move_left:
             global_arguments.left_pressed = False
@@ -82,7 +69,21 @@ class Main_Window(QWidget):
         if event.key() == global_arguments.key_attack_normal:
             global_arguments.attack_pressed = False
     
+    def change_scene(self):
+        """ 检测玩家是否进入门 """
+        player_rect = self.player.get_player()
+        for door in self.current_scene.doors:
+            print(player_rect.intersects(door.get_door()))
+            if player_rect.intersected(door.get_door()):
+                self.current_scene = create_scene(door.scene_id, self.width(), self.height(), self.ground_level)
+                if self.player.direction == 0:
+                    self.player.set_position(x=self.width() - self.player.x - self.player.reset_position_interval,y=self.player.y)
+                elif self.player.direction == 1:
+                    self.player.set_position(x=self.player.default_x+self.player.reset_position_interval,y=self.player.y)
+            
+    
     def update_game(self):
+        self.change_scene()  # 检测角色是否进入门，如果进入门，则需要场景切换
         self.player.update_c(obstacles=self.current_scene.obstacles)  # 下蹲运动
         self.player.update_x(0, self.width(), obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 水平运动
         self.player.update_y(0, self.current_scene.ground_level, obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 垂直运动
