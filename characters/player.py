@@ -13,6 +13,7 @@ class Player:
         
         # 当前状态
         self.hp = hp
+        self.is_aliving = True
         self.mp = mp
         self.x = x
         self.y = y
@@ -46,6 +47,8 @@ class Player:
         self.sprint_ability = True  # 冲刺能力
         self.sprint_strength = sprint_scale * velocity_x  # 冲刺
         self.sprint_duration = 200  # 冲刺持续时间，单位ms
+        
+        self.reset_position_interval = self.width
          
     def reset_jumping(self):
         self.is_jumping = False
@@ -75,6 +78,11 @@ class Player:
     def move_right(self):
         self.x += self.velocity_x
         
+    def take_damage(self, damage=1):
+        self.hp -= damage
+        if self.hp <= 0:
+            self.is_aliving = False
+        
     def crouch(self):
         self.y += self.height // 2
         self.height /= 2
@@ -84,7 +92,7 @@ class Player:
         self.height *= 2
     
     def sprint(self):
-        if self.player.sprint_ability:
+        if self.sprint_ability:
             self.velocity_x = self.sprint_strength
             QTimer.singleShot(self.sprint_duration, self.reset_velocity_x)
         
@@ -155,7 +163,7 @@ class Player:
                     self.crouch()
             
     
-    def update_x(self, border_left, border_right, obstacles=None):
+    def update_x(self, border_left, border_right, obstacles=None, enemies=None):
         # 左移
         if global_arguments.left_pressed:
             self.move_left()
@@ -175,6 +183,14 @@ class Player:
                     self.x = obstacle.x() + obstacle.width()
                     if self.claw_jumping_ability:
                         self.reset_jumping()  
+        
+        # 敌人
+        if enemies:
+            player_rect = self.get_player()
+            for enemy in enemies:
+                if player_rect.intersected(enemy) and player_rect.x() <= enemy.x() + enemy.width():
+                    self.x = enemy.x() + enemy.width() + self.reset_position_interval
+                    self.take_damage()
             
         # 右移        
         if global_arguments.right_pressed:
@@ -195,9 +211,17 @@ class Player:
                     self.x = obstacle.x() - player_rect.width()
                     if self.claw_jumping_ability:
                         self.reset_jumping() 
+        
+        # 敌人
+        if enemies:
+            player_rect = self.get_player()
+            for enemy in enemies:
+                if player_rect.intersected(enemy) and player_rect.x() >= enemy.x() - player_rect.width():
+                    self.x = enemy.x() - player_rect.width() - self.reset_position_interval
+                    self.take_damage()
                                   
             
-    def update_y(self, ceiling_level, ground_level, obstacles=None):
+    def update_y(self, ceiling_level, ground_level, obstacles=None, enemies=None):
         # 垂直位置变化
         self.velocity_y += self.gravity
         self.y += self.velocity_y
@@ -216,6 +240,14 @@ class Player:
                 if player_rect.intersected(obstacle) and self.velocity_y < 0:
                     self.y = obstacle.y() + obstacle.height()
                     self.velocity_y = 0
+        
+        # 敌人
+        if enemies:
+            player_rect = self.get_player()
+            for enemy in enemies:
+                if player_rect.intersected(enemy) and self.velocity_y < 0:
+                    self.y = enemy.y() + enemy.height() + self.reset_position_interval
+                    self.take_damage()
             
         # 下降过程
         # 地面
@@ -240,16 +272,27 @@ class Player:
                         self.set_velocity_y(1)     
                     else:
                         self.set_gravity(self.default_gravity)
+                        
+        # 敌人
+        # if enemies:
+        #     player_rect = self.get_player()
+        #     for enemy in enemies:
+        #         if player_rect.intersected(enemy) and self.velocity_y > 0:
+        #             ??
+        #             self.hp -= 1
+        #             self.take_damage()
     
     def draw(self, painter):
+        print(self.hp)
         
-        painter.setBrush(self.color)
-        painter.drawRect(self.get_player())
+        if self.is_aliving:
+            painter.setBrush(self.color)
+            painter.drawRect(self.get_player())
         
-        # 攻击效果渲染
-        if self.normal_attack_box:
-            painter.setBrush(QColor(0, 255, 0))
-            painter.drawRect(self.normal_attack_box)
+            # 攻击效果渲染
+            if self.normal_attack_box:
+                painter.setBrush(QColor(0, 255, 0))
+                painter.drawRect(self.normal_attack_box)
     
     def get_player(self):
         return QRect(self.x, self.y, self.width, self.height)

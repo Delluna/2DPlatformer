@@ -3,11 +3,11 @@ from PyQt6.QtGui import QColor
 
     
 class Platform(QRect):
-    def __init__(self, x, y, width, height, color=QColor(0, 0, 0)):
+    def __init__(self, x, y, width, height):
         # 正确调用基类的构造函数
         super().__init__(x, y, width, height)  
 
-        self.color = color
+        self.color = QColor(0, 0, 0)
 
     def draw(self, painter):
         painter.setBrush(self.color)
