@@ -5,7 +5,8 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtGui import QPainter, QColor
 
 from characters.player import Player
-from scenes.test_scene import Scene
+from scenes.action_test_scene import ActionScene
+from scenes.attack_test_scene import AttackScene
 
 import global_arguments
 
@@ -20,7 +21,9 @@ class Main_Window(QWidget):
         
         # 场景
         self.ground_level = 500
-        self.current_scene = Scene(self.width(), self.height(), ground_level=self.ground_level)
+        # self.current_scene = ActionScene(self.width(), self.height(), ground_level=self.ground_level)
+        self.current_scene = AttackScene(self.width(), self.height(), ground_level=self.ground_level)
+        
         
         # 定时器，用来刷新游戏画面
         self.timer = QTimer(self)

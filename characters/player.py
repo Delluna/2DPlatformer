@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QRect, QTimer
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QStaticText
 
 import global_arguments
 from utils.utils import is_horizontal_adjacent
@@ -7,23 +7,30 @@ from utils.utils import is_horizontal_adjacent
 class Player:
     def __init__(self, hp=3, mp=3, x=0, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
         # 默认值
+        self.default_hp = hp
+        self.default_mp = mp
+        self.default_x = x
+        self.default_y = y
+        self.default_width = width
+        self.default_height = height
         self.default_velocity_x = velocity_x  # 默认水平速度
         self.default_velocity_y = velocity_y  # 默认垂直速度
         self.default_gravity = gravity  # 默认重力
         
         # 当前状态
-        self.hp = hp
-        self.is_aliving = True
-        self.mp = mp
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
+        self.hp = self.default_hp
+        self.mp = self.default_mp
+        self.x = self.default_x
+        self.y = self.default_y
+        self.width = self.default_width
+        self.height = self.default_height
         self.color = QColor(255, 0, 0)
         self.direction = 1  # 人物朝向，0:'left', 1:'right', 2:'up', 3:'down'
         self.velocity_x = self.default_velocity_x  # 水平速度
         self.velocity_y = self.default_velocity_y  # 垂直速度
         self.gravity = self.default_gravity  # 重力
+        
+        self.is_aliving = True
         self.is_jumping = False
         self.is_second_jumping = False
         self.is_crouching = False  # 下蹲
@@ -81,7 +88,15 @@ class Player:
     def take_damage(self, damage=1):
         self.hp -= damage
         if self.hp <= 0:
-            self.is_aliving = False
+            # self.is_aliving = False
+            # self.hp = 0
+            
+            print('玩家复活')
+            self.hp = self.default_hp
+            self.x = self.default_x
+            self.y = self.default_y
+            self.width = self.default_width
+            self.height = self.default_height
         
     def crouch(self):
         self.y += self.height // 2
@@ -130,7 +145,7 @@ class Player:
         # 攻击碰撞检测
         if enemies:
             for enemy in enemies:
-                if self.normal_attack_box.intersects(enemy.get_enemy()):
+                if enemy.is_aliving and self.normal_attack_box.intersects(enemy.get_enemy()):
                     enemy.take_damage(self.normal_attack_damage)
         
         QTimer.singleShot(self.normal_attack_duration, self.end_attack)        # QTimer.singleShot(延迟时间, 需要执行的函数)，用于在 指定时间后执行某个函数（不需要括号），但不会重复执行。
@@ -188,7 +203,7 @@ class Player:
         if enemies:
             player_rect = self.get_player()
             for enemy in enemies:
-                if player_rect.intersected(enemy) and player_rect.x() <= enemy.x() + enemy.width():
+                if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() <= enemy.x() + enemy.width():
                     self.x = enemy.x() + enemy.width() + self.reset_position_interval
                     self.take_damage()
             
@@ -216,7 +231,7 @@ class Player:
         if enemies:
             player_rect = self.get_player()
             for enemy in enemies:
-                if player_rect.intersected(enemy) and player_rect.x() >= enemy.x() - player_rect.width():
+                if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() >= enemy.x() - player_rect.width():
                     self.x = enemy.x() - player_rect.width() - self.reset_position_interval
                     self.take_damage()
                                   
@@ -245,7 +260,7 @@ class Player:
         if enemies:
             player_rect = self.get_player()
             for enemy in enemies:
-                if player_rect.intersected(enemy) and self.velocity_y < 0:
+                if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y < 0:
                     self.y = enemy.y() + enemy.height() + self.reset_position_interval
                     self.take_damage()
             
@@ -277,13 +292,13 @@ class Player:
         # if enemies:
         #     player_rect = self.get_player()
         #     for enemy in enemies:
-        #         if player_rect.intersected(enemy) and self.velocity_y > 0:
+        #         if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y > 0:
         #             ??
         #             self.hp -= 1
         #             self.take_damage()
     
     def draw(self, painter):
-        print(self.hp)
+        painter.drawStaticText(10, 10, QStaticText(f"HP: {self.hp}"))
         
         if self.is_aliving:
             painter.setBrush(self.color)
