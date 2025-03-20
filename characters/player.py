@@ -5,7 +5,7 @@ import global_arguments
 from utils.utils import is_horizontal_adjacent
 
 class Player:
-    def __init__(self, hp=3, mp=3, x=0, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
+    def __init__(self, hp=3, mp=3, x=10, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
         # 默认值
         self.default_hp = hp
         self.default_mp = mp
@@ -67,6 +67,13 @@ class Player:
     def reset_velocity_x(self):
         self.set_velocity_x(self.default_velocity_x)
     
+    def reset_position(self):
+        self.set_position(self.default_x, self.default_y)
+    
+    def set_position(self, x, y):
+        self.x = x
+        self.y = y
+
     def set_gravity(self, gravity):
         self.gravity = gravity
         
@@ -93,10 +100,7 @@ class Player:
             
             print('玩家复活')
             self.hp = self.default_hp
-            self.x = self.default_x
-            self.y = self.default_y
-            self.width = self.default_width
-            self.height = self.default_height
+            self.reset_position()
         
     def crouch(self):
         self.y += self.height // 2
@@ -168,14 +172,13 @@ class Player:
         if not global_arguments.down_pressed and self.is_crouching:
             self.stretch()
             # 如果头顶障碍物，导致站起所需空间不足，则不站起
-            if obstacles:
-                player_rect = self.get_player()
-                flag = any(player_rect.intersected(obstacle) for obstacle in obstacles)
-                if not flag:
-                    self.is_crouching = False
-                    return
-                else:
-                    self.crouch()
+            player_rect = self.get_player()
+            flag = any(player_rect.intersected(obstacle) for obstacle in obstacles)
+            if not flag:
+                self.is_crouching = False
+                return
+            else:
+                self.crouch()
             
     
     def update_x(self, border_left, border_right, obstacles=None, enemies=None):
@@ -191,21 +194,19 @@ class Player:
             #     self.reset_jumping()
                 
         # 障碍物
-        if obstacles:
-            player_rect = self.get_player()
-            for obstacle in obstacles: 
-                if player_rect.intersected(obstacle) and player_rect.x() <= obstacle.x() + obstacle.width():
-                    self.x = obstacle.x() + obstacle.width()
-                    if self.claw_jumping_ability:
-                        self.reset_jumping()  
+        player_rect = self.get_player()
+        for obstacle in obstacles: 
+            if player_rect.intersected(obstacle) and player_rect.x() <= obstacle.x() + obstacle.width():
+                self.x = obstacle.x() + obstacle.width()
+                if self.claw_jumping_ability:
+                    self.reset_jumping()  
         
         # 敌人
-        if enemies:
-            player_rect = self.get_player()
-            for enemy in enemies:
-                if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() <= enemy.x() + enemy.width():
-                    self.x = enemy.x() + enemy.width() + self.reset_position_interval
-                    self.take_damage()
+        player_rect = self.get_player()
+        for enemy in enemies:
+            if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() <= enemy.x() + enemy.width():
+                self.x = enemy.x() + enemy.width() + self.reset_position_interval
+                self.take_damage()
             
         # 右移        
         if global_arguments.right_pressed:
@@ -219,21 +220,19 @@ class Player:
             #     self.reset_jumping()
             
         # 障碍物   
-        if obstacles:
-            player_rect = self.get_player()
-            for obstacle in obstacles:
-                if player_rect.intersected(obstacle) and player_rect.x() >= obstacle.x() - player_rect.width():
-                    self.x = obstacle.x() - player_rect.width()
-                    if self.claw_jumping_ability:
-                        self.reset_jumping() 
+        player_rect = self.get_player()
+        for obstacle in obstacles:
+            if player_rect.intersected(obstacle) and player_rect.x() >= obstacle.x() - player_rect.width():
+                self.x = obstacle.x() - player_rect.width()
+                if self.claw_jumping_ability:
+                    self.reset_jumping() 
         
         # 敌人
-        if enemies:
-            player_rect = self.get_player()
-            for enemy in enemies:
-                if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() >= enemy.x() - player_rect.width():
-                    self.x = enemy.x() - player_rect.width() - self.reset_position_interval
-                    self.take_damage()
+        player_rect = self.get_player()
+        for enemy in enemies:
+            if enemy.is_aliving and player_rect.intersected(enemy) and player_rect.x() >= enemy.x() - player_rect.width():
+                self.x = enemy.x() - player_rect.width() - self.reset_position_interval
+                self.take_damage()
                                   
             
     def update_y(self, ceiling_level, ground_level, obstacles=None, enemies=None):
@@ -248,21 +247,19 @@ class Player:
             self.velocity_y = 0
             
         # 障碍物
-        if obstacles:
-            player_rect = self.get_player()
-            for obstacle in obstacles:
-                # 不能超过平台
-                if player_rect.intersected(obstacle) and self.velocity_y < 0:
-                    self.y = obstacle.y() + obstacle.height()
-                    self.velocity_y = 0
+        player_rect = self.get_player()
+        for obstacle in obstacles:
+            # 不能超过平台
+            if player_rect.intersected(obstacle) and self.velocity_y < 0:
+                self.y = obstacle.y() + obstacle.height()
+                self.velocity_y = 0
         
         # 敌人
-        if enemies:
-            player_rect = self.get_player()
-            for enemy in enemies:
-                if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y < 0:
-                    self.y = enemy.y() + enemy.height() + self.reset_position_interval
-                    self.take_damage()
+        player_rect = self.get_player()
+        for enemy in enemies:
+            if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y < 0:
+                self.y = enemy.y() + enemy.height() + self.reset_position_interval
+                self.take_damage()
             
         # 下降过程
         # 地面
@@ -272,30 +269,28 @@ class Player:
             self.reset_jumping()
         
         # 障碍物
-        if obstacles:
-            player_rect = self.get_player()
-            for obstacle in obstacles:
-                # 站在平台上 
-                if player_rect.intersected(obstacle) and self.velocity_y > 0:
-                    self.y = obstacle.y() - self.height
-                    self.velocity_y = 0
-                    self.reset_jumping()
-                # 螳螂爪
-                if self.claw_jumping_ability and self.velocity_y > 0:
-                    if is_horizontal_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
-                        self.set_gravity(0)
-                        self.set_velocity_y(1)     
-                    else:
-                        self.set_gravity(self.default_gravity)
+        player_rect = self.get_player()
+        for obstacle in obstacles:
+            # 站在平台上 
+            if player_rect.intersected(obstacle) and self.velocity_y > 0:
+                self.y = obstacle.y() - self.height
+                self.velocity_y = 0
+                self.reset_jumping()
+            # 螳螂爪
+            if self.claw_jumping_ability and self.velocity_y > 0:
+                if is_horizontal_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
+                    self.set_gravity(0)
+                    self.set_velocity_y(1)     
+                else:
+                    self.set_gravity(self.default_gravity)
                         
         # 敌人
-        # if enemies:
-        #     player_rect = self.get_player()
-        #     for enemy in enemies:
-        #         if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y > 0:
-        #             ??
-        #             self.hp -= 1
-        #             self.take_damage()
+        # player_rect = self.get_player()
+        # for enemy in enemies:
+        #     if enemy.is_aliving and player_rect.intersected(enemy) and self.velocity_y > 0:
+        #         ??
+        #         self.hp -= 1
+        #         self.take_damage()
     
     def draw(self, painter):
         painter.drawStaticText(10, 10, QStaticText(f"HP: {self.hp}"))

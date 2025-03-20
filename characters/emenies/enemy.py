@@ -34,6 +34,7 @@ class Enemy(QRect):
         self.hp -= damage
         if self.hp <= 0:
             self.is_aliving = False
+            self.hp = 0
         
     def draw(self, painter):
         if self.is_aliving:

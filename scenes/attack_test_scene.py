@@ -25,4 +25,7 @@ class AttackScene(Scene):
         for enemy in self.enemies:
             enemy.is_able_resurrect = True
             enemy.resurrection_time = 2000
+        
+        # door/adjacency scenes
+        self.add_door(0, 0, 400)
    

@@ -19,3 +19,6 @@ class ActionScene(Scene):
         self.obstacles.append(Platform(400, 400, 150, 50))
         self.obstacles.append(Platform(650, 250, 150, 50))
         
+        # door/djacency scenes
+        self.add_door(0, 799, 400)
+        

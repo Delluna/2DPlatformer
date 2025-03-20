@@ -2,11 +2,14 @@ import sys
 from PyQt6.QtWidgets import QApplication, QWidget
 from PyQt6 import QtCore
 from PyQt6.QtCore import QTimer
-from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtGui import QPainter, QColor, QStaticText
 
 from characters.player import Player
-from scenes.action_test_scene import ActionScene
-from scenes.attack_test_scene import AttackScene
+from scenes.test_scene import TestScene
+# from scenes.action_test_scene import ActionScene
+# from scenes.attack_test_scene import AttackScene
+
+from scenes.hash_scenes import create_scene
 
 import global_arguments
 
@@ -21,9 +24,7 @@ class Main_Window(QWidget):
         
         # 场景
         self.ground_level = 500
-        # self.current_scene = ActionScene(self.width(), self.height(), ground_level=self.ground_level)
-        self.current_scene = AttackScene(self.width(), self.height(), ground_level=self.ground_level)
-        
+        self.current_scene = create_scene(0, self.width(), self.height(), self.ground_level)
         
         # 定时器，用来刷新游戏画面
         self.timer = QTimer(self)
@@ -51,7 +52,20 @@ class Main_Window(QWidget):
         if not global_arguments.attack_pressed and event.key() == global_arguments.key_attack_normal:
             global_arguments.attack_pressed = True
             self.player.attack(enemies=self.current_scene.enemies)  # 攻击
-    
+        # 检测角色是否进入门
+        self.check_door_collision() 
+
+    def check_door_collision(self):
+        """ 检测玩家是否进入门 """
+        player_rect = self.player.get_player()
+        for door in self.current_scene.doors:
+            if player_rect.intersected(door.get_door()):
+                self.current_scene = create_scene(door.scene_id, self.width(), self.height(), self.ground_level)
+                if self.player.direction == 0:
+                    self.player.set_position(x=self.width() - self.player.x,y=self.player.y)
+                elif self.player.direction == 1:
+                    self.player.set_position(x=self.player.default_x,y=self.player.y)
+            
     def keyReleaseEvent(self, event):
         if event.isAutoRepeat():  # 如果是自动重复，不处理
             return  
@@ -72,7 +86,7 @@ class Main_Window(QWidget):
         self.player.update_c(obstacles=self.current_scene.obstacles)  # 下蹲运动
         self.player.update_x(0, self.width(), obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 水平运动
         self.player.update_y(0, self.current_scene.ground_level, obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 垂直运动
-         
+
         self.update()  # 刷新窗口， self.update()方法会触发paintEvent()重新绘制窗口
     
     def paintEvent(self, event):
