@@ -1,11 +1,13 @@
+import os
+from collections import deque
 from PyQt6.QtCore import QRect, QTimer
-from PyQt6.QtGui import QColor, QStaticText
+from PyQt6.QtGui import QColor, QStaticText, QImage, QPen
 
 import global_arguments
 from utils.utils import is_horizontal_adjacent
 
 class Player:
-    def __init__(self, hp=3, mp=3, x=10, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, sprint_scale = 3):
+    def __init__(self, hp=3, mp=3, x=10, y=0, width=50, height=50, velocity_x=5, velocity_y=0, gravity=1, jump_strength=-15, rush_scale = 3):
         # 默认值
         self.default_hp = hp
         self.default_mp = mp
@@ -30,11 +32,21 @@ class Player:
         self.velocity_y = self.default_velocity_y  # 垂直速度
         self.gravity = self.default_gravity  # 重力
         
+        # self.state = {
+        #     'is_aliving': True,
+        #     'is_jumping': False,
+        #     'is_second_jumping': False,
+        #     'is_crouching' : False,
+        #     'is_attacking' : False,
+        #     'is_walling': False,
+        # }
+        
         self.is_aliving = True
         self.is_jumping = False
         self.is_second_jumping = False
         self.is_crouching = False  # 下蹲
         self.is_attacking = False
+        self.is_walling = False
         
         # 攻击能力
         self.normal_attack_damage = 1  # 攻击伤害
@@ -51,11 +63,18 @@ class Player:
         self.claw_jumping_ability = True  # 螳螂爪能力
         
         # 冲刺能力
-        self.sprint_ability = True  # 冲刺能力
-        self.sprint_strength = sprint_scale * velocity_x  # 冲刺
-        self.sprint_duration = 200  # 冲刺持续时间，单位ms
+        self.rush_ability = True  # 冲刺能力
+        self.rush_strength = rush_scale * velocity_x  # 冲刺
+        self.rush_duration = 200  # 冲刺持续时间，单位ms
         
         self.reset_position_interval = self.width
+        
+        # 图片
+        self.default_player_img_path = os.path.join(global_arguments.animations_player_root, 'walkStart', '0.png')
+        self.walk_index = 0
+        self.player_img = QImage(self.default_player_img_path)
+        
+        self.imgs_path = deque()
          
     def reset_jumping(self):
         self.is_jumping = False
@@ -92,6 +111,12 @@ class Player:
     def move_right(self):
         self.x += self.velocity_x
         
+    def load_imgs(self, action):
+        root = os.path.join(global_arguments.animations_player_root, action)
+        for _, _, imgs in os.walk(root):
+            for img in reversed(imgs):
+                self.imgs_path.append(os.path.join(root, img))
+            
     def take_damage(self, damage=1):
         self.hp -= damage
         if self.hp <= 0:
@@ -110,10 +135,14 @@ class Player:
         self.y -= self.height
         self.height *= 2
     
-    def sprint(self):
-        if self.sprint_ability:
-            self.velocity_x = self.sprint_strength
-            QTimer.singleShot(self.sprint_duration, self.reset_velocity_x)
+    def rush(self):
+        if self.rush_ability:
+            self.velocity_x = self.rush_strength
+            self.set_gravity(self.default_gravity)
+            self.is_walling = False
+            # 冲刺动画
+            QTimer.singleShot(0, lambda: self.load_imgs('rush'))
+            QTimer.singleShot(self.rush_duration, self.reset_velocity_x)
         
     def jump(self):
         # 二段跳
@@ -121,12 +150,18 @@ class Player:
             self.set_velocity_y(self.jump_strength)
             self.set_gravity(self.default_gravity)
             self.is_second_jumping = True
+            self.is_walling = False
+            # 跳跃动画
+            QTimer.singleShot(0, lambda: self.load_imgs('jump'))
             
         # 跳跃
         if self.jumping_ability and not self.is_jumping:
             self.set_velocity_y(self.jump_strength)
             self.set_gravity(self.default_gravity)
             self.is_jumping = True
+            self.is_walling = False
+            # 跳跃动画
+            QTimer.singleShot(0, lambda: self.load_imgs('jump'))
         
     def attack(self, enemies=None):
         if self.normal_attack_cooldown:
@@ -152,6 +187,7 @@ class Player:
                 if enemy.is_aliving and self.normal_attack_box.intersects(enemy.get_enemy()):
                     enemy.take_damage(self.normal_attack_damage)
         
+        QTimer.singleShot(0, lambda: self.load_imgs('attack_0'))
         QTimer.singleShot(self.normal_attack_duration, self.end_attack)        # QTimer.singleShot(延迟时间, 需要执行的函数)，用于在 指定时间后执行某个函数（不需要括号），但不会重复执行。
         QTimer.singleShot(self.normal_attack_cooldown_time, self.reset_normal_attack_cooldown)
     
@@ -280,9 +316,12 @@ class Player:
             if self.claw_jumping_ability and self.velocity_y > 0:
                 if is_horizontal_adjacent(player_rect, obstacle) and (global_arguments.left_pressed or global_arguments.right_pressed):  # 匀速下滑
                     self.set_gravity(0)
-                    self.set_velocity_y(1)     
-                else:
+                    self.set_velocity_y(1)
+                    self.is_walling = obstacle
+                    self.imgs_path.append(os.path.join(global_arguments.animations_player_root, 'Wall.png'))
+                elif self.is_walling == obstacle and ((obstacle.left() < self.x and  not global_arguments.left_pressed) or (obstacle.right() > self.x and not global_arguments.right_pressed)):
                     self.set_gravity(self.default_gravity)
+                    self.is_walling = False
                         
         # 敌人
         # player_rect = self.get_player()
@@ -292,17 +331,43 @@ class Player:
         #         self.hp -= 1
         #         self.take_damage()
     
+    def update_img(self):
+        # 左右移动
+        if global_arguments.left_pressed or global_arguments.right_pressed:
+            self.imgs_path.appendleft(os.path.join(global_arguments.animations_player_root, 'walk', str(self.walk_index) + '.png'))
+            self.walk_index = (self.walk_index + 1) % 8
+        else:
+            self.imgs_path = deque([img_path for img_path in self.imgs_path if img_path.split('\\')[-2] != 'walk'])
+        
+        # 加载图片
+        if self.imgs_path:
+            self.player_img_path = self.imgs_path.pop()
+        else:
+            self.player_img_path = self.default_player_img_path
+        
+        self.player_img = QImage(self.player_img_path)
+        print(self.is_walling)
+        
+        # 反转图片
+        if self.direction == 0:
+            self.player_img = self.player_img.mirrored(horizontal=True,vertical=False)
+        if self.is_walling != False:
+            self.player_img = self.player_img.mirrored(horizontal=True,vertical=False)
+        
+    
     def draw(self, painter):
         painter.drawStaticText(10, 10, QStaticText(f"HP: {self.hp}"))
         
         if self.is_aliving:
-            painter.setBrush(self.color)
+            painter.setPen(QColor(0, 0, 0, 0))  # 边框透明
+            painter.setBrush(QColor(0, 0, 0, 0))  # 填充透明
             painter.drawRect(self.get_player())
+            painter.drawImage(self.get_player(), self.player_img)
         
             # 攻击效果渲染
-            if self.normal_attack_box:
-                painter.setBrush(QColor(0, 255, 0))
-                painter.drawRect(self.normal_attack_box)
+            # if self.normal_attack_box:
+            #     painter.setBrush(QColor(0, 255, 0))
+            #     painter.drawRect(self.normal_attack_box)
     
     def get_player(self):
         return QRect(self.x, self.y, self.width, self.height)

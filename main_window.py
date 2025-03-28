@@ -43,9 +43,9 @@ class Main_Window(QWidget):
             global_arguments.right_pressed = True
         if event.key() == global_arguments.key_move_crouch:
             global_arguments.down_pressed = True
-        if not global_arguments.sprint_pressed and event.key() == global_arguments.key_move_sprint:
-            global_arguments.sprint_pressed = True
-            self.player.sprint()  # 冲刺
+        if not global_arguments.rush_pressed and event.key() == global_arguments.key_move_rush:
+            global_arguments.rush_pressed = True
+            self.player.rush()  # 冲刺
         if not global_arguments.jump_pressed and event.key() == global_arguments.key_move_jump:
             global_arguments.jump_pressed = True
             self.player.jump()  # 跳跃
@@ -60,8 +60,8 @@ class Main_Window(QWidget):
             global_arguments.left_pressed = False
         if event.key() == global_arguments.key_move_right:
             global_arguments.right_pressed = False
-        if event.key() == global_arguments.key_move_sprint:
-            global_arguments.sprint_pressed = False
+        if event.key() == global_arguments.key_move_rush:
+            global_arguments.rush_pressed = False
         if event.key() == global_arguments.key_move_crouch:
             global_arguments.down_pressed = False
         if event.key() == global_arguments.key_move_jump:
@@ -73,7 +73,6 @@ class Main_Window(QWidget):
         """ 检测玩家是否进入门 """
         player_rect = self.player.get_player()
         for door in self.current_scene.doors:
-            print(player_rect.intersects(door.get_door()))
             if player_rect.intersected(door.get_door()):
                 self.current_scene = create_scene(door.scene_id, self.width(), self.height(), self.ground_level)
                 if self.player.direction == 0:
@@ -87,7 +86,7 @@ class Main_Window(QWidget):
         self.player.update_c(obstacles=self.current_scene.obstacles)  # 下蹲运动
         self.player.update_x(0, self.width(), obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 水平运动
         self.player.update_y(0, self.current_scene.ground_level, obstacles=self.current_scene.obstacles, enemies=self.current_scene.enemies)  # 垂直运动
-
+        self.player.update_img()
         self.update()  # 刷新窗口， self.update()方法会触发paintEvent()重新绘制窗口
     
     def paintEvent(self, event):
